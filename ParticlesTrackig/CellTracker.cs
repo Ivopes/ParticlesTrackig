@@ -20,7 +20,7 @@ namespace ParticlesTrackig
         private static readonly Vector2 Down = new Vector2(0, 1);
         private static readonly Vector2 Left = new Vector2(-1, 0);
 
-        private const float MaxCentroidLength = 16f * 16f; // squared, pro rychlejsi vypocet
+        private const float MaxCentroidLength = 14f * 14f; // squared, pro rychlejsi vypocet
         private bool[,] _checkedMask;
         private int _time = -1;
 
@@ -62,10 +62,36 @@ namespace ParticlesTrackig
                     ChangeBitmapColor(file, no);
                 }
                 */
-                ChangeBitmapColor(file, news);
+                //ChangeBitmapColor(file, news);
+                DrawDebugLines(file, par);
             }
+
+
         }
 
+        private void DrawDebugLines(string filename, List<Particle> par)
+        {
+            var bmp = new Bitmap(filename);
+
+            Pen redPen = new Pen(Color.Red, 1);
+
+            foreach (Particle particle in par)
+            {
+                for (int i = 1; i < particle.Centroids.Count; i++)
+                {
+                    if (i < 1) continue;
+                    Vector2 cen = particle.Centroids[i];
+                    Vector2 cenLast = particle.Centroids[i-1];
+
+                    using (var graphics = Graphics.FromImage(bmp))
+                    {
+                        graphics.DrawLine(redPen, cen.X, cen.Y, cenLast.X, cenLast.Y);
+                    }
+                }
+            }
+
+            SaveBmp(filename.Substring(filename.LastIndexOf("\\")), bmp);
+        }
         private List<Particle> FindParticlesInPicture(string file)
         {
             Bitmap bitmap = new Bitmap(file);
@@ -238,8 +264,9 @@ namespace ParticlesTrackig
                 }
             }
 
-            SaveBmp(filename.Substring(filename.LastIndexOf("\\"))+"Alter", bmp);
+            SaveBmp(filename.Substring(filename.LastIndexOf("\\")), bmp);
         }
+        
     }
     static class PointExtension
     {
