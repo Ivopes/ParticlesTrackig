@@ -23,53 +23,70 @@ namespace ParticlesTrackig
         private const float MaxCentroidLength = 14f * 14f; // squared, pro rychlejsi vypocet
         private bool[,] _checkedMask;
         private int _time = -1;
+        private string[] _files;
+
+        private int _timeInterval = 5 * 60;
 
         private List<List<Particle>> _particles = new();
         public CellTracker(string folder, string outputFolder)
         {
             outputDir = outputFolder; ;
 
-            var files = Directory.GetFiles(folder);
-
-            foreach (var file in files)
+            _files = Directory.GetFiles(folder);
+        }
+        public void TrackCells(bool saveOutput)
+        {
+            TrackCells(_files, saveOutput);
+        }
+        public void TrackCells(bool saveOutput, int from, int to)
+        {
+            TrackCells(_files, saveOutput, from, to);
+        }
+        private void TrackCells(string[] files, bool saveOutput)
+        {
+            TrackCells(files, saveOutput, 0, _files.Length);
+        }
+        private void TrackCells(string[] files, bool saveOutput, int from, int to)
+        {
+            for (int i = from; i < to; i++)
             {
+                string? file = files[i];
                 ++_time;
                 Console.WriteLine(file);
 
                 List<Particle> par = FindParticlesInPicture(file);
                 var news = par.Where(p => p.TimeOfCreation == _time).ToList();
                 _particles.Add(par);
-                /*
-                if (_particles.Count > 1)
-                {
-                    List<Particle> yes = new();
-                    List<Particle> no = new();
-                    for (int i = 0; i < par.Count; i++)
-                    {
-                        if (TryFindLastParent(par[i].GetCenInT(0), _time-1, out var result)) // cas 0 ptotoze jsou ted vytvorene
-                        {
-                            //result.Positions.Add(par[i].GetPosInT(0)); // pridat aktualni pozice a centr do rodice
-                            //result.Centroids.Add(par[i].GetCenInT(0));
-                            //par[i] = result; // priradit rodice na tento prvek (jsou vlastne stejni)
-                            yes.Add(result);
-                        }
-                        else
-                        {
-                            no.Add(par[i]);
-                        }
-                    }
 
-                    ChangeBitmapColor(file, no);
-                }
-                */
-                //ChangeBitmapColor(file, news);
-                DrawDebugLines(file, par);
+                if (saveOutput)
+                    DrawDebugLines(file, par, 15);
             }
 
+            var finalParticles = _particles.Last();
 
+            Vector2 averageSpeeds = Vector2.Zero;
+            for (int i = 0; i < finalParticles.Count; i++)
+            {
+                var particle = finalParticles[i];
+                Vector2 averageParSpeed = Vector2.Zero;
+                for (int j = 1; j < particle.Centroids.Count; j++)
+                {
+                    Vector2 posDiff = Vector2.Abs(particle.Centroids[j] - particle.Centroids[j - 1]);
+                    averageParSpeed += posDiff;
+                }
+                if (particle.Centroids.Count > 1)
+                    averageParSpeed /= particle.Centroids.Count - 1;
+                averageSpeeds += averageParSpeed;
+                if (float.IsNaN(averageSpeeds.X))
+                {
+
+                }
+            }
+
+            averageSpeeds /= finalParticles.Count;
+        
         }
-
-        private void DrawDebugLines(string filename, List<Particle> par)
+        private void DrawDebugLines(string filename, List<Particle> par, int showLast = -1)
         {
             var bmp = new Bitmap(filename);
 
@@ -77,7 +94,13 @@ namespace ParticlesTrackig
 
             foreach (Particle particle in par)
             {
-                for (int i = 1; i < particle.Centroids.Count; i++)
+                int from = 1;
+                if (showLast != -1)
+                    from = particle.Centroids.Count - showLast;
+
+                //if (from < 1 && from > particle.Centroids.Count) from = 1;
+
+                for (int i = from; i < particle.Centroids.Count; i++)
                 {
                     if (i < 1) continue;
                     Vector2 cen = particle.Centroids[i];
