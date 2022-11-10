@@ -35,6 +35,6 @@ var tracker = new CellTracker("../../../unet-pred-binarize", "../../../output");
 
 tracker.TrackCells(true);
 
-var speed = tracker.GetAverageSpeed();
+var speed = tracker.GetAverageSpeed(true);
 
 Console.WriteLine($"\nAverage speed is \nX: {speed.X} pixels\nY: {speed.Y} pixels");

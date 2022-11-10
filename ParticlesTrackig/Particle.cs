@@ -12,8 +12,8 @@ namespace ParticlesTrackig
     {
         public List<List<Vector2>> Positions = new();
         public List<Vector2> Centroids = new();
-        public List<Vector2> GetPosInT(int t) => Positions[t];
-        public Vector2 GetCenInT(int t) => Centroids[t];
+        public List<Vector2> GetPosInT(int t) => Positions[t - TimeOfCreation];
+        public Vector2 GetCenInT(int t) => Centroids[t - TimeOfCreation];
         public int TimeOfCreation;
         public Particle()
         {
