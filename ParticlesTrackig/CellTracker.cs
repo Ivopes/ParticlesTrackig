@@ -27,7 +27,7 @@ namespace ParticlesTrackig
 
         private int _timeInterval = 5 * 60;
 
-        private List<List<Particle>> _particles = new();
+        private List<List<Particle>> _particlesInTime = new();
         public CellTracker(string folder, string outputFolder)
         {
             outputDir = outputFolder; ;
@@ -55,37 +55,58 @@ namespace ParticlesTrackig
                 Console.WriteLine(file);
 
                 List<Particle> par = FindParticlesInPicture(file);
+                
                 var news = par.Where(p => p.TimeOfCreation == _time).ToList();
-                _particles.Add(par);
+                _particlesInTime.Add(par);
 
                 if (saveOutput)
                     DrawDebugLines(file, par, 15);
             }
-
-            var finalParticles = _particles.Last();
-
-            Vector2 averageSpeeds = Vector2.Zero;
-            for (int i = 0; i < finalParticles.Count; i++)
-            {
-                var particle = finalParticles[i];
-                Vector2 averageParSpeed = Vector2.Zero;
-                for (int j = 1; j < particle.Centroids.Count; j++)
-                {
-                    Vector2 posDiff = Vector2.Abs(particle.Centroids[j] - particle.Centroids[j - 1]);
-                    averageParSpeed += posDiff;
-                }
-                if (particle.Centroids.Count > 1)
-                    averageParSpeed /= particle.Centroids.Count - 1;
-                averageSpeeds += averageParSpeed;
-                if (float.IsNaN(averageSpeeds.X))
-                {
-
-                }
-            }
-
-            averageSpeeds /= finalParticles.Count;
-        
         }
+        public Vector2 GetAverageSpeed(int from, int to)
+        {
+            Vector2 sumSpeed = Vector2.Zero;
+            if (to > _particlesInTime.Count) to = _particlesInTime.Count;
+
+            for (int time = from; time < to; time++)
+            {
+                Vector2 averageSpeedsInTime = Vector2.Zero;
+
+                List<Particle>? particles = _particlesInTime[time];
+                int particlesCreatedInTime = 0;
+                for (int i = 0; i < particles.Count; i++)
+                {
+                    var particle = particles[i];
+
+                    if (particle.TimeOfCreation != time) continue;
+                    particlesCreatedInTime++;
+
+                    Vector2 averageParSpeed = Vector2.Zero;
+                    for (int j = 1; j < particle.Centroids.Count; j++)
+                    {
+                        Vector2 posDiff = Vector2.Abs(particle.Centroids[j] - particle.Centroids[j - 1]);
+                        averageParSpeed += posDiff;
+                    }
+                    if (particle.Centroids.Count > 1)
+                        averageParSpeed /= particle.Centroids.Count - 1;
+
+                    averageSpeedsInTime += averageParSpeed;
+                    if (float.IsNaN(averageSpeedsInTime.X))
+                    {
+
+                    }
+                }
+                sumSpeed += averageSpeedsInTime / particlesCreatedInTime;
+            }
+            Vector2 averageSpeed = sumSpeed / _particlesInTime.Count;
+
+            return averageSpeed;
+        }
+        public Vector2 GetAverageSpeed()
+        {
+            return GetAverageSpeed(0, _particlesInTime.Count);
+        }
+
         private void DrawDebugLines(string filename, List<Particle> par, int showLast = -1)
         {
             var bmp = new Bitmap(filename);
@@ -137,22 +158,22 @@ namespace ParticlesTrackig
                             {
                                 if (TryFindLastParent(particle.GetCenInT(0), _time-1, out var parentPar))
                                 {
-                                    if (parentPar.Centroids.Count <= _time)
+                                    if (!par.Contains(parentPar))
                                     {
-                                        //parentPar.Positions.Add(particle.GetPosInT(0));
-                                        //parentPar.Centroids.Add(particle.GetCenInT(0));
-                                        //particle = parentPar;
+                                        parentPar.Positions.Add(particle.GetPosInT(0));
+                                        parentPar.Centroids.Add(particle.GetCenInT(0));
+                                        particle = parentPar;
                                     }
                                     else // vytvor novy, pravdepodobne se rozpulila, nebo byly na sobe
                                     {
-                                        /*var dividedP = new Particle(parentPar);
+                                        var dividedP = new Particle(parentPar);
+                                        dividedP.Positions.RemoveAt(dividedP.Positions.Count - 1);
                                         dividedP.Positions.Add(particle.GetPosInT(0));
+                                        dividedP.Centroids.RemoveAt(dividedP.Centroids.Count - 1);
                                         dividedP.Centroids.Add(particle.GetCenInT(0));
-                                        particle = dividedP*/
+                                        particle = dividedP;
                                     }
-                                    particle.TimeOfCreation = parentPar.TimeOfCreation;
-                                    particle.Centroids.InsertRange(0, parentPar.Centroids);
-                                    particle.Positions.InsertRange(0, parentPar.Positions);
+
                                 }
                             }
                             par.Add(particle);
@@ -173,7 +194,7 @@ namespace ParticlesTrackig
         }
         private bool TryFindLastParent(Vector2 centroid, int timeToFind, out Particle par)
         {
-            var particles = _particles[timeToFind];
+            var particles = _particlesInTime[timeToFind];
 
             float minDist = float.MaxValue;
             Particle p = null;

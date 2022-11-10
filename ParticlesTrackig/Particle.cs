@@ -27,7 +27,11 @@ namespace ParticlesTrackig
         }
         public Particle(Particle b)
         {
-            Positions.AddRange(b.Positions);
+            //Positions.AddRange(b.Positions);
+            for (int i = 0; i < b.Positions.Count; i++)
+            {
+                Positions.Add(b.Positions[i].ToList());
+            }
             Centroids.AddRange(b.Centroids);
 
             TimeOfCreation = b.TimeOfCreation;
