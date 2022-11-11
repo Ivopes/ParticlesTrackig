@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ParticlesTrackig
 {
@@ -34,19 +29,19 @@ namespace ParticlesTrackig
 
             _files = Directory.GetFiles(folder);
         }
-        public void TrackCells(bool saveOutput)
+        public void TrackCells(bool saveOutput, bool fixShake)
         {
-            TrackCells(_files, saveOutput);
+            TrackCells(_files, saveOutput, fixShake);
         }
-        public void TrackCells(bool saveOutput, int from, int to)
+        public void TrackCells(bool saveOutput, int from, int to, bool fixShake)
         {
-            TrackCells(_files, saveOutput, from, to);
+            TrackCells(_files, saveOutput, from, to, fixShake);
         }
-        private void TrackCells(string[] files, bool saveOutput)
+        private void TrackCells(string[] files, bool saveOutput, bool fixShake)
         {
-            TrackCells(files, saveOutput, 0, _files.Length);
+            TrackCells(files, saveOutput, 0, _files.Length, fixShake);
         }
-        private void TrackCells(string[] files, bool saveOutput, int from, int to)
+        private void TrackCells(string[] files, bool saveOutput, int from, int to, bool fixShake)
         {
             for (int i = from; i < to; i++)
             {
@@ -58,7 +53,7 @@ namespace ParticlesTrackig
 
                 _particlesInTime.Add(par);
 
-                if (i > from)
+                if (fixShake && i > from)
                 {
                     Vector2 speed = GetAverageOffset(i, false);
                     foreach (var particle in par)
@@ -75,11 +70,11 @@ namespace ParticlesTrackig
                     DrawDebugLines(file, par, 15);
             }
         }
-        
+
         public Vector2 GetAverageOffset(int time, bool absolute)
         {
             Vector2[] speeds = new Vector2[_particlesInTime[time].Count];
-           
+
             List<Particle>? particles = _particlesInTime[time];
 
             for (int i = 0; i < particles.Count; i++)
@@ -95,7 +90,7 @@ namespace ParticlesTrackig
                     posDiff = particle.GetCenInT(time) - particle.GetCenInT(time - 1);
 
                 speeds[i] = posDiff;
-                
+
             }
 
             //Array.Sort(speeds, new Vector2Comparer());
@@ -214,7 +209,7 @@ namespace ParticlesTrackig
 
                 //if (from < 1 && from > particle.Centroids.Count) from = 1;
                 //vykreslit bile particles
-                
+
                 var positions = particle.Positions.Last();
                 for (int i = 0; i < positions.Count; i++)
                 {
@@ -232,13 +227,46 @@ namespace ParticlesTrackig
                 {
                     if (i < 1) continue;
                     Vector2 cen = particle.Centroids[i];
-                    Vector2 cenLast = particle.Centroids[i-1];
+                    Vector2 cenLast = particle.Centroids[i - 1];
 
                     graphics.DrawLine(redPen, cen.X, cen.Y, cenLast.X, cenLast.Y);
                 }
             }
 
             SaveBmp(filename.Substring(filename.LastIndexOf("\\")), bmp);
+        }
+        private List<Particle> FindParticlesInPicture(List<Particle> particles)
+        {
+            List<Particle> par = new();
+
+            for (int i = 0; i < particles.Count; i++)
+            {
+                var particle = particles[i];
+
+                if (_time > 0)
+                {
+                    if (TryFindLastParent(particle.GetCenInT(_time), _time - 1, out var parentPar))
+                    {
+                        if (!par.Contains(parentPar))
+                        {
+                            particle = parentPar;
+                        }
+                        else // vytvor novy, pravdepodobne se rozpulila, nebo byly na sobe
+                        {
+                            var dividedP = new Particle(parentPar);
+                            dividedP.Positions.RemoveAt(dividedP.Positions.Count - 1);
+                            dividedP.Positions.Add(particle.Positions[0]);
+                            dividedP.Centroids.RemoveAt(dividedP.Centroids.Count - 1);
+                            dividedP.Centroids.Add(particle.Centroids[0]);
+                            particle = dividedP;
+                        }
+
+                    }
+                }
+                par.Add(particle);
+            }
+
+            return par;
         }
         private List<Particle> FindParticlesInPicture(string file)
         {
@@ -258,9 +286,9 @@ namespace ParticlesTrackig
                     {
                         if (TryFindParticle(bitmap, _checkedMask, new Vector2(j, i), out var particle))
                         {
-                            if (_time > 0)
+                            if (_time > 0) // muze existovat rodic?
                             {
-                                if (TryFindLastParent(particle.Centroids[0], _time-1, out var parentPar))
+                                if (TryFindLastParent(particle.Centroids[0], _time - 1, out var parentPar))
                                 {
                                     if (!par.Contains(parentPar))
                                     {
@@ -311,14 +339,14 @@ namespace ParticlesTrackig
                     p = particle;
                 }
             }
-            par = p; 
+            par = p;
             if (p == null)
             {
                 return false;
             }
             return true;
         }
-        private bool TryFindParticle(Bitmap bitmap, bool[,] checkMask, Vector2 point, out Particle particle) 
+        private bool TryFindParticle(Bitmap bitmap, bool[,] checkMask, Vector2 point, out Particle particle)
         {
             if (IsBlack(bitmap.GetPixel((int)point.X, (int)point.Y)) || checkMask[(int)point.Y, (int)point.X])
             {
@@ -330,7 +358,7 @@ namespace ParticlesTrackig
             searchStack.Push(point);
 
             var resultPositions = new List<Vector2>();
-            
+
             do
             {
                 var p = searchStack.Pop();
@@ -408,13 +436,13 @@ namespace ParticlesTrackig
             {
                 foreach (var v in particle.Positions[0])
                 {
-                    bmp.SetPixel((int)v.X ,(int)v.Y, Color.Red); 
+                    bmp.SetPixel((int)v.X, (int)v.Y, Color.Red);
                 }
             }
 
             SaveBmp(filename.Substring(filename.LastIndexOf("\\")), bmp);
         }
-        
+
     }
     static class PointExtension
     {

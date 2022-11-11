@@ -1,5 +1,4 @@
 ﻿using ParticlesTrackig;
-using System.Drawing;
 
 var files = Directory.GetFiles("../../../output");
 var filesCorrect = Directory.GetFiles("../../../output - Copy");
@@ -33,7 +32,7 @@ Directory.CreateDirectory("../../../output");
 var tracker = new CellTracker("../../../unet-pred-binarize", "../../../output");
 //var tracker = new CellTracker("../../../Test");
 
-tracker.TrackCells(true);
+tracker.TrackCells(true, true);
 
 var speed = tracker.GetAverageSpeed(true);
 
