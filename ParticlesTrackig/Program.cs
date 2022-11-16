@@ -36,4 +36,8 @@ tracker.TrackCells(true, true);
 
 var speed = tracker.GetAverageSpeed(true);
 
-Console.WriteLine($"\nAverage speed is \nX: {speed.X} pixels\nY: {speed.Y} pixels");
+Console.WriteLine($"\nAverage speed is \nX: {speed.X} pixels\nY: {speed.Y} pixels\nResult: {speed.Length()}");
+
+var distance = tracker.GetAverageDistance(true);
+
+Console.WriteLine($"\nAverage distance traveled is \nX: {distance.X} pixels\nY: {distance.Y} pixels\nResult: {distance.Length()}");

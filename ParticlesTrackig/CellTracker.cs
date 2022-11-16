@@ -33,6 +33,16 @@ namespace ParticlesTrackig
         {
             TrackCells(_files, saveOutput, fixShake);
         }
+
+        public Vector2 GetAverageDistance(bool absolute)
+        {
+            var speed = GetAverageSpeed(absolute);
+
+            Vector2 avgDistance = speed * _particlesInTime.Count;
+
+            return avgDistance;
+        }
+
         public void TrackCells(bool saveOutput, int from, int to, bool fixShake)
         {
             TrackCells(_files, saveOutput, from, to, fixShake);
